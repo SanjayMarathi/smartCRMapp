@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -83,13 +82,13 @@ Future<void> exportCsv(BuildContext context, List<Lead> leads) async {
 
   final Directory dir = await getTemporaryDirectory();
   final File file = File(
-    '${dir.path}\\smartcmr-leads-${DateTime.now().toIso8601String().split('T').first}.csv',
+    '${dir.path}\\smartcrm-leads-${DateTime.now().toIso8601String().split('T').first}.csv',
   );
   await file.writeAsString('\uFEFF$csv');
   await SharePlus.instance.share(
     ShareParams(
       files: <XFile>[XFile(file.path)],
-      text: 'smartCMR lead export',
+      text: 'SmartCRM lead export',
     ),
   );
 }
@@ -105,7 +104,7 @@ Future<void> exportPdf(
     pw.MultiPage(
       build: (pw.Context context) => <pw.Widget>[
         pw.Text(
-          'smartCMR Lead Report',
+          'SmartCRM Lead Report',
           style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 8),
@@ -154,7 +153,7 @@ Future<void> exportPdf(
 
   await Printing.sharePdf(
     bytes: await pdf.save(),
-    filename: 'smartcmr-report.pdf',
+    filename: 'smartcrm-report.pdf',
   );
 }
 
@@ -193,7 +192,7 @@ Future<void> main() async {
   }
 
   final ThemeMode themeMode =
-      (prefs.getString('smartcmr-theme') ?? 'dark') == 'light'
+      (prefs.getString('smartcrm-theme') ?? 'dark') == 'light'
           ? ThemeMode.light
           : ThemeMode.dark;
 
@@ -232,7 +231,7 @@ class _SmartCmrAppState extends State<SmartCmrApp> {
     final ThemeMode next =
         _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
     await widget.prefs.setString(
-      'smartcmr-theme',
+      'smartcrm-theme',
       next == ThemeMode.light ? 'light' : 'dark',
     );
     setState(() => _themeMode = next);
@@ -242,7 +241,7 @@ class _SmartCmrAppState extends State<SmartCmrApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'smartCMR',
+      title: 'SmartCRM',
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: _themeMode,
@@ -283,16 +282,23 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            BrandLogo(size: 84),
-            SizedBox(height: 16),
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text('Loading smartCMR...'),
+            const BrandLogoText(size: 72),
+            const SizedBox(height: 20),
+            Text(
+              'SmartCRM',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 12),
+            Text('Loading…', style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
       ),
@@ -316,7 +322,7 @@ class SetupScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('smartCMR Setup'),
+        title: const Text('SmartCRM Setup', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: <Widget>[
           IconButton(
             onPressed: onToggleTheme,
@@ -329,7 +335,7 @@ class SetupScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: <Widget>[
-          const Center(child: BrandLogo(size: 92)),
+          const Center(child: BrandLogoText(size: 72)),
           const SizedBox(height: 18),
           const SectionCard(
             child: SelectableText(
@@ -438,9 +444,10 @@ class _PublicScreenState extends State<PublicScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            BrandLogo(size: 32),
-            SizedBox(width: 12),
+            BrandLogoText(size: 28),
+            SizedBox(width: 10),
             Text('SmartCRM', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
@@ -467,9 +474,9 @@ class _PublicScreenState extends State<PublicScreen> {
       key: const ValueKey<String>('landing'),
       padding: const EdgeInsets.all(20),
       children: <Widget>[
-        const SizedBox(height: 12),
-        const Center(child: BrandLogo(size: 86)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 24),
+        const Center(child: BrandLogoText(size: 72)),
+        const SizedBox(height: 16),
         Text(
           'Intelligent Lead Management',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -481,29 +488,16 @@ class _PublicScreenState extends State<PublicScreen> {
         const SizedBox(height: 8),
         Text(
           'Close more deals with smarter pipeline control',
-          style: Theme.of(context).textTheme.headlineMedium,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
         Text(
-          'smartCMR keeps lead tracking, reminders, communication logs, AI insights, and live reports in one app.',
+          'SmartCRM keeps lead tracking, reminders, communication logs, AI insights, and live reports in one app.',
           textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge,
         ),
-        const SizedBox(height: 18),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Image.asset(
-            'assets/branding/hero.png',
-            height: 220,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              height: 220,
-              alignment: Alignment.center,
-              child: const BrandLogo(size: 70),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         FilledButton(
           onPressed: () => setState(() {
             _authMode = true;
@@ -559,7 +553,13 @@ class _PublicScreenState extends State<PublicScreen> {
             icon: const Icon(Icons.arrow_back),
           ),
         ),
-        const Center(child: BrandLogo(size: 68)),
+        const Center(child: BrandLogoText(size: 60)),
+        const SizedBox(height: 12),
+        Text(
+          'SmartCRM',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 18),
         SegmentedButton<bool>(
           segments: const <ButtonSegment<bool>>[
@@ -781,11 +781,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Row(
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                BrandLogo(size: 32),
-                SizedBox(width: 12),
-                Text('SmartCRM', style: TextStyle(fontWeight: FontWeight.bold)),
+                const BrandLogoText(size: 26),
+                const SizedBox(width: 10),
+                Text(
+                  _labelForView(_view),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             actions: <Widget>[
@@ -796,25 +800,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                       ? Icons.dark_mode
                       : Icons.light_mode,
                 ),
+                tooltip: 'Toggle theme',
               ),
               IconButton(
                 onPressed: () => FirebaseAuthService.instance.signOut(),
                 icon: const Icon(Icons.logout),
+                tooltip: 'Sign out',
               ),
             ],
           ),
           bottomNavigationBar: _buildBottomNav(),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: FloatingActionButton(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            elevation: 4,
-            backgroundColor: Colors.white,
-            foregroundColor: Theme.of(context).colorScheme.primary,
-            onPressed: () => setState(() => _view = WorkspaceView.ai),
-            child: const Icon(Icons.auto_awesome, size: 28),
-          ),
           body: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: switch (_view) {
@@ -868,9 +863,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                   onAsk: _aiPrompt.text.trim().isEmpty ? null : () => _askAi(leads),
                 ),
               WorkspaceView.about => const StaticPage(
-                  title: 'About smartCMR',
+                  title: 'About SmartCRM',
                   paragraphs: <String>[
-                    'smartCMR is a real-time lead management app for sales teams.',
+                    'SmartCRM is a real-time lead management app for sales teams.',
                     'It includes pipeline tracking, reminders, logs, reports, and an AI assistant.',
                   ],
                 ),
@@ -933,16 +928,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Widget _buildBottomNav() {
     return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8.0,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: <Widget>[
           _navItem(WorkspaceView.pipeline, Icons.view_kanban_outlined, 'Pipeline'),
           _navItem(WorkspaceView.reports, Icons.bar_chart_outlined, 'Reports'),
-          const SizedBox(width: 48), // Space for FAB
+          _navItem(WorkspaceView.ai, Icons.auto_awesome_outlined, 'AI'),
           _navItem(WorkspaceView.reminders, Icons.notifications_none, 'Tasks'),
-          _navItem(WorkspaceView.logs, Icons.chat_bubble_outline, 'History'),
+          _navItem(WorkspaceView.logs, Icons.chat_bubble_outline, 'Logs'),
         ],
       ),
     );
@@ -1059,7 +1052,7 @@ class PipelineView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('WELCOME BACK, SANJAY\nMARATHI', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, letterSpacing: 1.2, fontWeight: FontWeight.bold)),
+              Text('LEAD PIPELINE', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, letterSpacing: 1.2, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2025,31 +2018,43 @@ class _LeadEditorViewState extends State<LeadEditorView> {
   }
 }
 
-class BrandLogo extends StatelessWidget {
-  const BrandLogo({super.key, this.size = 52});
+/// A simple text-based "S" logo representing SmartCRM — no image dependency.
+class BrandLogoText extends StatelessWidget {
+  const BrandLogoText({super.key, this.size = 52});
 
   final double size;
 
   @override
   Widget build(BuildContext context) {
+    final Color primary = Theme.of(context).colorScheme.primary;
+    final double radius = size * 0.24;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
+        gradient: LinearGradient(
+          colors: <Color>[primary, primary.withOpacity(0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(radius),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.24),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: primary.withOpacity(0.35),
+            blurRadius: size * 0.4,
+            offset: Offset(0, size * 0.12),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        child: SvgPicture.asset(
-          'assets/branding/smartcmr_logo.svg',
-          fit: BoxFit.cover,
+      alignment: Alignment.center,
+      child: Text(
+        'S',
+        style: TextStyle(
+          fontSize: size * 0.52,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: -1,
+          height: 1,
         ),
       ),
     );

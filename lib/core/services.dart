@@ -101,7 +101,7 @@ class FirebaseEnvConfig {
         iosBundleId: iosBundleId,
       );
     }
-    throw UnsupportedError('smartCMR targets Android and iOS only.');
+    throw UnsupportedError('SmartCRM targets Android and iOS only.');
   }
 }
 
