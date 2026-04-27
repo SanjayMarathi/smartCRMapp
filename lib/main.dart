@@ -226,6 +226,21 @@ class SmartCmrApp extends StatefulWidget {
 
 class _SmartCmrAppState extends State<SmartCmrApp> {
   late ThemeMode _themeMode = widget.themeMode;
+  WorkspaceView _view = WorkspaceView.pipeline;
+  String _stageFilter = 'all';
+  String _minValue = '';
+  String _maxValue = '';
+  String? _selectedLeadId;
+  String? _editLeadId;
+  final TextEditingController _search = TextEditingController();
+  final TextEditingController _aiPrompt = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _aiPrompt.dispose();
+    super.dispose();
+  }
 
   Future<void> _toggleTheme() async {
     final ThemeMode next =
@@ -265,6 +280,20 @@ class _SmartCmrAppState extends State<SmartCmrApp> {
                   themeMode: _themeMode,
                   onToggleTheme: _toggleTheme,
                   user: snapshot.data!,
+                  view: _view,
+                  onViewChanged: (v) => setState(() => _view = v),
+                  stageFilter: _stageFilter,
+                  onStageFilterChanged: (s) => setState(() => _stageFilter = s),
+                  minValue: _minValue,
+                  onMinValueChanged: (m) => setState(() => _minValue = m),
+                  maxValue: _maxValue,
+                  onMaxValueChanged: (m) => setState(() => _maxValue = m),
+                  selectedLeadId: _selectedLeadId,
+                  onSelectedLeadIdChanged: (id) => setState(() => _selectedLeadId = id),
+                  editLeadId: _editLeadId,
+                  onEditLeadIdChanged: (id) => setState(() => _editLeadId = id),
+                  searchController: _search,
+                  aiPromptController: _aiPrompt,
                 );
               },
             )
@@ -639,11 +668,39 @@ class WorkspaceScreen extends StatefulWidget {
     required this.themeMode,
     required this.onToggleTheme,
     required this.user,
+    required this.view,
+    required this.onViewChanged,
+    required this.stageFilter,
+    required this.onStageFilterChanged,
+    required this.minValue,
+    required this.onMinValueChanged,
+    required this.maxValue,
+    required this.onMaxValueChanged,
+    required this.selectedLeadId,
+    required this.onSelectedLeadIdChanged,
+    required this.editLeadId,
+    required this.onEditLeadIdChanged,
+    required this.searchController,
+    required this.aiPromptController,
   });
 
   final ThemeMode themeMode;
   final Future<void> Function() onToggleTheme;
   final fb_auth.User user;
+  final WorkspaceView view;
+  final ValueChanged<WorkspaceView> onViewChanged;
+  final String stageFilter;
+  final ValueChanged<String> onStageFilterChanged;
+  final String minValue;
+  final ValueChanged<String> onMinValueChanged;
+  final String maxValue;
+  final ValueChanged<String> onMaxValueChanged;
+  final String? selectedLeadId;
+  final ValueChanged<String?> onSelectedLeadIdChanged;
+  final String? editLeadId;
+  final ValueChanged<String?> onEditLeadIdChanged;
+  final TextEditingController searchController;
+  final TextEditingController aiPromptController;
 
   @override
   State<WorkspaceScreen> createState() => _WorkspaceScreenState();
@@ -651,15 +708,6 @@ class WorkspaceScreen extends StatefulWidget {
 
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   final CrmService _service = CrmService.instance;
-  final TextEditingController _search = TextEditingController();
-  final TextEditingController _aiPrompt = TextEditingController();
-
-  WorkspaceView _view = WorkspaceView.pipeline;
-  String _stageFilter = 'all';
-  String _minValue = '';
-  String _maxValue = '';
-  String? _selectedLeadId;
-  String? _editLeadId;
   String? _error;
   String? _aiError;
   String _aiReply = '';
@@ -668,25 +716,34 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   final Map<String, String> _stageDrafts = <String, String>{};
 
   @override
+  void initState() {
+    super.initState();
+    widget.searchController.addListener(_onRebuild);
+    widget.aiPromptController.addListener(_onRebuild);
+  }
+
+  void _onRebuild() => setState(() {});
+
+  @override
   void dispose() {
-    _search.dispose();
-    _aiPrompt.dispose();
+    widget.searchController.removeListener(_onRebuild);
+    widget.aiPromptController.removeListener(_onRebuild);
     super.dispose();
   }
 
   List<Lead> _filter(List<Lead> leads) {
     return leads.where((Lead lead) {
       bool ok = true;
-      if (_stageFilter != 'all') ok = ok && lead.stage == _stageFilter;
-      if (_minValue.isNotEmpty) {
-        ok = ok && lead.estimatedValue >= (double.tryParse(_minValue) ?? 0);
+      if (widget.stageFilter != 'all') ok = ok && lead.stage == widget.stageFilter;
+      if (widget.minValue.isNotEmpty) {
+        ok = ok && lead.estimatedValue >= (double.tryParse(widget.minValue) ?? 0);
       }
-      if (_maxValue.isNotEmpty) {
+      if (widget.maxValue.isNotEmpty) {
         ok = ok &&
-            lead.estimatedValue <= (double.tryParse(_maxValue) ?? double.infinity);
+            lead.estimatedValue <= (double.tryParse(widget.maxValue) ?? double.infinity);
       }
-      if (_search.text.trim().isNotEmpty) {
-        final String term = _search.text.toLowerCase();
+      if (widget.searchController.text.trim().isNotEmpty) {
+        final String term = widget.searchController.text.toLowerCase();
         ok = ok &&
             '${lead.companyName} ${lead.contactName} ${lead.contactEmail}'
                 .toLowerCase()
@@ -698,13 +755,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Lead? _selectedLead(List<Lead> leads) {
     if (leads.isEmpty) return null;
-    return leads.where((Lead l) => l.id == _selectedLeadId).cast<Lead?>().firstOrNull ??
+    return leads.where((Lead l) => l.id == widget.selectedLeadId).cast<Lead?>().firstOrNull ??
         leads.first;
   }
 
   Lead? _editingLead(List<Lead> leads) {
-    if (_editLeadId == null) return null;
-    return leads.where((Lead l) => l.id == _editLeadId).cast<Lead?>().firstOrNull;
+    if (widget.editLeadId == null) return null;
+    return leads.where((Lead l) => l.id == widget.editLeadId).cast<Lead?>().firstOrNull;
   }
 
   Future<void> _saveLead(LeadFormData form) async {
@@ -713,15 +770,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       _error = null;
     });
     try {
-      if (_view == WorkspaceView.create) {
+      if (widget.view == WorkspaceView.create) {
         await _service.createLead(form);
-      } else if (_editLeadId != null) {
-        await _service.updateLead(_editLeadId!, form);
+      } else if (widget.editLeadId != null) {
+        await _service.updateLead(widget.editLeadId!, form);
       }
-      setState(() {
-        _view = WorkspaceView.pipeline;
-        _editLeadId = null;
-      });
+      widget.onViewChanged(WorkspaceView.pipeline);
+      widget.onEditLeadIdChanged(null);
     } catch (error) {
       setState(() => _error = error.toString());
     } finally {
@@ -737,7 +792,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     });
     try {
       final String reply =
-          await _service.askAi(prompt: _aiPrompt.text.trim(), leads: leads);
+          await _service.askAi(prompt: widget.aiPromptController.text.trim(), leads: leads);
       setState(() => _aiReply = reply);
     } catch (error) {
       setState(() => _aiError = error.toString());
@@ -787,7 +842,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 const BrandLogoText(size: 26),
                 const SizedBox(width: 10),
                 Text(
-                  _labelForView(_view),
+                  _labelForView(widget.view),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -812,7 +867,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           bottomNavigationBar: _buildBottomNav(),
           body: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
-            child: switch (_view) {
+            child: switch (widget.view) {
               WorkspaceView.create => LeadEditorView(
                   key: const ValueKey<String>('create'),
                   title: 'New Lead',
@@ -845,22 +900,22 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                   leads: leads,
                   selectedLead: selected,
                   onSelectLead: (Lead? lead) =>
-                      setState(() => _selectedLeadId = lead?.id),
+                      widget.onSelectedLeadIdChanged(lead?.id),
                   service: _service,
                 ),
               WorkspaceView.logs => LogsView(
                   leads: leads,
                   selectedLead: selected,
                   onSelectLead: (Lead? lead) =>
-                      setState(() => _selectedLeadId = lead?.id),
+                      widget.onSelectedLeadIdChanged(lead?.id),
                   service: _service,
                 ),
               WorkspaceView.ai => AiView(
-                  promptController: _aiPrompt,
+                  promptController: widget.aiPromptController,
                   busy: _aiBusy,
                   errorText: _aiError,
                   reply: _aiReply,
-                  onAsk: _aiPrompt.text.trim().isEmpty ? null : () => _askAi(leads),
+                  onAsk: () => _askAi(leads),
                 ),
               WorkspaceView.about => const StaticPage(
                   title: 'About SmartCRM',
@@ -886,38 +941,38 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                   leads: leads,
                   filteredLeads: filtered,
                   stats: stats,
-                  searchController: _search,
-                  stageFilter: _stageFilter,
-                  minValue: _minValue,
-                  maxValue: _maxValue,
+                  searchController: widget.searchController,
+                  stageFilter: widget.stageFilter,
+                  minValue: widget.minValue,
+                  maxValue: widget.maxValue,
                   stageDrafts: _stageDrafts,
                   busy: _busy,
                   errorText: _error,
-                  onNewLead: () => setState(() => _view = WorkspaceView.create),
+                  onNewLead: () => widget.onViewChanged(WorkspaceView.create),
                   onSearchChanged: (_) => setState(() {}),
                   onStageFilterChanged: (String value) =>
-                      setState(() => _stageFilter = value),
+                      widget.onStageFilterChanged(value),
                   onMinValueChanged: (String value) =>
-                      setState(() => _minValue = value),
+                      widget.onMinValueChanged(value),
                   onMaxValueChanged: (String value) =>
-                      setState(() => _maxValue = value),
+                      widget.onMaxValueChanged(value),
                   onExportCsv: () => exportCsv(context, leads),
                   onExportPdf: () => exportPdf(context, leads, stats),
                   onStageDraftChanged: (Lead lead, String stage) =>
                       setState(() => _stageDrafts[lead.id] = stage),
                   onMoveStage: _moveStage,
-                  onEditLead: (Lead lead) => setState(() {
-                    _editLeadId = lead.id;
-                    _view = WorkspaceView.edit;
-                  }),
-                  onOpenLogs: (Lead lead) => setState(() {
-                    _selectedLeadId = lead.id;
-                    _view = WorkspaceView.logs;
-                  }),
-                  onOpenReminders: (Lead lead) => setState(() {
-                    _selectedLeadId = lead.id;
-                    _view = WorkspaceView.reminders;
-                  }),
+                  onEditLead: (Lead lead) {
+                    widget.onEditLeadIdChanged(lead.id);
+                    widget.onViewChanged(WorkspaceView.edit);
+                  },
+                  onOpenLogs: (Lead lead) {
+                    widget.onSelectedLeadIdChanged(lead.id);
+                    widget.onViewChanged(WorkspaceView.logs);
+                  },
+                  onOpenReminders: (Lead lead) {
+                    widget.onSelectedLeadIdChanged(lead.id);
+                    widget.onViewChanged(WorkspaceView.reminders);
+                  },
                 ),
             },
           ),
@@ -942,12 +997,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   }
 
   Widget _navItem(WorkspaceView view, IconData icon, String label) {
-    final bool isSelected = _view == view;
+    final bool isSelected = widget.view == view;
     final Color color = isSelected
         ? Theme.of(context).colorScheme.primary
         : Colors.grey;
     return InkWell(
-      onTap: () => setState(() => _view = view),
+      onTap: () => widget.onViewChanged(view),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1731,7 +1786,7 @@ class _AiViewState extends State<AiView> {
               ),
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: widget.busy || !hasText ? null : widget.onAsk,
+                onPressed: widget.busy || widget.promptController.text.trim().isEmpty ? null : widget.onAsk,
                 icon: const Icon(Icons.auto_awesome),
                 label: Text(widget.busy ? 'Thinking...' : 'Ask AI'),
               ),
@@ -1757,7 +1812,11 @@ class _AiViewState extends State<AiView> {
           ].map(
             (String prompt) => ActionChip(
               label: Text(prompt),
-              onPressed: () => widget.promptController.text = prompt,
+              onPressed: () {
+                widget.promptController.text = prompt;
+                // Directly trigger ask if user picks a chip
+                if (widget.onAsk != null) widget.onAsk!();
+              },
             ),
           ).toList(),
         ),
@@ -2026,7 +2085,7 @@ class BrandLogoText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primary = Theme.of(context).colorScheme.primary;
+    const Color primary = Color(0xFF22C55E);
     final double radius = size * 0.24;
     return Container(
       width: size,
