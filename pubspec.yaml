@@ -32,9 +32,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/branding/smartcmr_logo.svg
-    - assets/branding/hero.png
+    
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/branding/hero.png"
+  image_path: "assets/branding/smartcmr_logo.svg"

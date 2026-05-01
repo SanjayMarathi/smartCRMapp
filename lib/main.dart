@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'core/models.dart';
 import 'core/services.dart';
@@ -226,6 +227,7 @@ class SmartCmrApp extends StatefulWidget {
 
 class _SmartCmrAppState extends State<SmartCmrApp> {
   late ThemeMode _themeMode = widget.themeMode;
+  late final Stream<fb_auth.User?> _authStream = FirebaseAuthService.instance.authChanges;
   WorkspaceView _view = WorkspaceView.pipeline;
   String _stageFilter = 'all';
   String _minValue = '';
@@ -262,7 +264,7 @@ class _SmartCmrAppState extends State<SmartCmrApp> {
       themeMode: _themeMode,
       home: widget.firebaseReady
           ? StreamBuilder<fb_auth.User?>(
-              stream: FirebaseAuthService.instance.authChanges,
+              stream: _authStream,
               builder: (
                 BuildContext context,
                 AsyncSnapshot<fb_auth.User?> snapshot,
@@ -563,6 +565,33 @@ class _PublicScreenState extends State<PublicScreen> {
           title: 'AI Assistant',
           description: 'Get pipeline summaries, priorities, and email drafts.',
         ),
+        const SizedBox(height: 32),
+        // Additional content
+        const Divider(),
+        const SizedBox(height: 16),
+        Text(
+          'More Features Coming Soon...',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'We are constantly working to improve SmartCRM. Stay tuned for advanced analytics, integrations, and more!',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+        ),
+        const SizedBox(height: 32),
+        // Footer
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              '© ${DateTime.now().year} SmartCRM. All rights reserved.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -582,29 +611,39 @@ class _PublicScreenState extends State<PublicScreen> {
             icon: const Icon(Icons.arrow_back),
           ),
         ),
-        const Center(child: BrandLogoText(size: 60)),
         const SizedBox(height: 12),
-        Text(
-          'SmartCRM',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 18),
-        SegmentedButton<bool>(
-          segments: const <ButtonSegment<bool>>[
-            ButtonSegment<bool>(value: true, label: Text('Sign In')),
-            ButtonSegment<bool>(value: false, label: Text('Create Account')),
-          ],
-          selected: <bool>{_signInMode},
-          onSelectionChanged: (Set<bool> value) {
-            setState(() {
-              _signInMode = value.first;
-              _error = '';
-            });
-          },
-        ),
-        const SizedBox(height: 18),
-        if (_signInMode) ...<Widget>[
+        Card(
+          elevation: 8,
+          shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Center(child: BrandLogoText(size: 60)),
+                const SizedBox(height: 12),
+                Text(
+                  'SmartCRM',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 18),
+                SegmentedButton<bool>(
+                  segments: const <ButtonSegment<bool>>[
+                    ButtonSegment<bool>(value: true, label: Text('Sign In')),
+                    ButtonSegment<bool>(value: false, label: Text('Create Account')),
+                  ],
+                  selected: <bool>{_signInMode},
+                  onSelectionChanged: (Set<bool> value) {
+                    setState(() {
+                      _signInMode = value.first;
+                      _error = '';
+                    });
+                  },
+                ),
+                const SizedBox(height: 18),
+                if (_signInMode) ...<Widget>[
           TextField(
             controller: _inEmail,
             decoration: const InputDecoration(labelText: 'Email Address'),
@@ -648,13 +687,18 @@ class _PublicScreenState extends State<PublicScreen> {
             child: Text(_busy ? 'Creating Account...' : 'Create Account'),
           ),
         ],
-        if (_error.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 12),
-          Text(
-            _error,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+                if (_error.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
           ),
-        ],
+        ),
       ],
     );
   }
@@ -1797,6 +1841,19 @@ class _AiViewState extends State<AiView> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
+              if (widget.busy)
+                const Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text('AI is analyzing...'),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -1812,11 +1869,13 @@ class _AiViewState extends State<AiView> {
           ].map(
             (String prompt) => ActionChip(
               label: Text(prompt),
-              onPressed: () {
-                widget.promptController.text = prompt;
-                // Directly trigger ask if user picks a chip
-                if (widget.onAsk != null) widget.onAsk!();
-              },
+              onPressed: widget.busy
+                  ? null
+                  : () {
+                      widget.promptController.text = prompt;
+                      // Optionally let user review before sending, but user complained about auto run issues
+                      // So we just set the text, user can click ask. 
+                    },
             ),
           ).toList(),
         ),
@@ -2085,37 +2144,10 @@ class BrandLogoText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color primary = Color(0xFF22C55E);
-    final double radius = size * 0.24;
-    return Container(
+    return SvgPicture.asset(
+      'assets/branding/smartcmr_logo.svg',
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[primary, primary.withOpacity(0.75)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: primary.withOpacity(0.35),
-            blurRadius: size * 0.4,
-            offset: Offset(0, size * 0.12),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'S',
-        style: TextStyle(
-          fontSize: size * 0.52,
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
-          letterSpacing: -1,
-          height: 1,
-        ),
-      ),
     );
   }
 }
